@@ -1,0 +1,43 @@
+# IntelliJ project files
+.idea/
+*.iml
+*.iws
+*.ipr
+
+# Build output directories
+target/
+out/
+build/
+
+# Logs
+*.log
+
+# Maven
+.mvn/
+.settings/
+dependency-reduced-pom.xml
+release.properties
+
+# Gradle
+.gradle/
+build/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IntelliJ run configurations
+*.run.xml
+
+# Local environment files
+.env
+*.local
+*.swp
+
+# Other IDEs (optional, if used)
+.vscode/
+
+# Coverage and test reports
+coverage/
+jacoco.exec
+test-output/
