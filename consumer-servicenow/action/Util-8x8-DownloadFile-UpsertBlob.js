@@ -1,18 +1,12 @@
-/*
-Action name: Util-8x8-DownloadFile
-Application: Global
-input: Objectid, authtoken, odate (for storing into azure blobstorage)
-*/
-
 var probe = new JavascriptProbe(inputs.midservername);
-probe.setName("8x8_Download8x8File_Metadata");
+probe.setName("8x8_Download8x8File_UploadBlob");
 probe.setJavascript("var pdf = new FortegraUtilContactCenter(); res = pdf.download8x8File();");
 var jsonContent = {};
 jsonContent["ObjectId"] = inputs.objectid ;
 jsonContent["AuthToken"] = inputs.auth;
 jsonContent["ODate"] = inputs.odate;
-jsonContent["BlobFileName"] = "";
-jsonContent["IsMetadataDownload"] = 1;
+jsonContent["BlobFileName"] = inputs.blobfilename;
+jsonContent["IsMetadataDownload"] = 0;
 probe.addParameter("requestBody", JSON.stringify(jsonContent));
 var strOutputEccId = probe.create();
 outputs.resp_payload = strOutputEccId;

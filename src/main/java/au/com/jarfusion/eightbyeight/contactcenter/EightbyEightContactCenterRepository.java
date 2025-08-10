@@ -8,6 +8,9 @@ import org.apache.hc.client5.http.fluent.Content;
 import org.apache.hc.client5.http.fluent.Request;
 import org.apache.hc.core5.http.ContentType;
 import org.json.JSONObject;
+
+import java.io.PrintWriter;
+import java.io.StringWriter;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 
@@ -22,22 +25,38 @@ public class EightbyEightContactCenterRepository {
      Downloads the 8x8 file and store into azure blob storage
      */
     public String download8x8File(String input){
-        JSONObject inputObj = new JSONObject(input);
+
         JSONObject overAllResult = new JSONObject();
         StringBuilder debugMessage = new StringBuilder();
         try {
+            debugMessage.append("Started...");
+            JSONObject inputObj = new JSONObject(input);
             String objectId = inputObj.get("ObjectId") == JSONObject.NULL ? null : (String) inputObj.get("ObjectId");
+            String blobFileName = inputObj.get("BlobFileName") == JSONObject.NULL ? null : (String) inputObj.get("BlobFileName");
             String authToken = inputObj.get("AuthToken") == JSONObject.NULL ? null : (String) inputObj.get("AuthToken");
             String oDate = inputObj.get("ODate") == JSONObject.NULL ? null : (String) inputObj.get("ODate");
-
-            String response = downloadFileName(objectId, authToken, debugMessage);
-            JSONObject filenameObject = new JSONObject(response);
-            overAllResult.put("FileName",(String)filenameObject.get("FileName"));
-            downloadFile((String)filenameObject.get("FileName"), authToken, oDate, debugMessage);
+            Integer isMetadataDownload = inputObj.get("IsMetadataDownload") == JSONObject.NULL ? null : (Integer) inputObj.get("IsMetadataDownload");
+            if(isMetadataDownload ==1) {
+                String response = downloadFileName(objectId, authToken, debugMessage);
+                JSONObject filenameObject = new JSONObject(response);
+                overAllResult.put("BlobFileName", (String) filenameObject.get("FileName"));
+                overAllResult.put("ODate", oDate);
+                overAllResult.put("ObjectId", objectId);
+                overAllResult.put("AuthToken", authToken);
+                overAllResult.put("Status", 0);
+            }
+            else {
+                downloadFile(blobFileName, authToken, oDate, debugMessage);
+                overAllResult.put("BlobFileName", blobFileName);
+                overAllResult.put("ODate", oDate);
+                overAllResult.put("ObjectId", objectId);
+                overAllResult.put("AuthToken", authToken);
+                overAllResult.put("Status", 0);
+            }
         }
         catch (Exception ex){
-            debugMessage.append("Error - "+ ex.getMessage());
-            debugMessage.append("Error-StackTrace - "+ex.getStackTrace()+ex.getCause().getMessage());
+            debugMessage.append("Error");
+            debugMessage.append("Error-StackTrace - "+ex.getMessage());
         }
         finally{
             overAllResult.put("DebugMessage", debugMessage.toString());
@@ -58,6 +77,7 @@ public class EightbyEightContactCenterRepository {
             Content response = Request.post(fileUrl)
                     .addHeader("Authorization", authToken)
                     .addHeader("Accept", "application/json")
+                    .addHeader("Content-Type", "application/json")
                     .bodyString("[\""+ objectId  +"\"]", ContentType.APPLICATION_JSON)
                     .execute()
                     .returnContent();
@@ -65,9 +85,10 @@ public class EightbyEightContactCenterRepository {
             fileName =  inputObj.get("zipName") == JSONObject.NULL ? null: (String)inputObj.get("zipName");
             resp.put("FileDownloadMetadata", response.asString());
             resp.put("FileName",fileName);
+            debugMessage.append("File Metadata -"+resp.toString());
 
         } catch (Exception e) {
-            debugMessage.append("Error occured in downloadFileName.Details -"+e.getMessage() +e.getStackTrace() + e.getCause().getMessage());
+            debugMessage.append("Error occured in downloadFileName.Details -"+ e.getMessage());
         }
         return resp.toString();
     }
@@ -96,14 +117,15 @@ public class EightbyEightContactCenterRepository {
 
         try {
             // Step 1: Download the file from the URL
-            System.out.println("Downloading file from URL...");
+            debugMessage.append("Downloading file from URL..."+fileUrl);
+            debugMessage.append("Auth token to download file..."+authToken);
             byte[] fileData = Request.get(fileUrl)
                     .addHeader("Authorization", authToken)
                     .execute()
                     .returnContent()
                     .asBytes();
             Files.write(Paths.get(localFilePath), fileData);
-            System.out.println("File downloaded: " + localFilePath);
+            debugMessage.append("File downloaded: " + localFilePath);
             debugMessage.append("Downloaded to Local File System"+localFilePath);
 
             // Step 2: Upload to Azure Blob Storage
@@ -121,7 +143,12 @@ public class EightbyEightContactCenterRepository {
             debugMessage.append("Local file deleted.");
 
         } catch (Exception e) {
-            debugMessage.append("Error Occured in downloadFile.Details -"+e.getMessage() +e.getStackTrace() + e.getCause().getMessage());
+            debugMessage.append("Error Occured in downloadFile.Details -"+e.getMessage());
+            StringWriter sw = new StringWriter();
+            PrintWriter pw = new PrintWriter(sw);
+            e.printStackTrace(pw);
+            String stackTraceAsString = sw.toString();
+            debugMessage.append("Stack trace -"+ stackTraceAsString);
         }
     }
 }
